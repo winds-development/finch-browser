@@ -17,32 +17,36 @@ jobs:
           distribution: 'zulu'
           java-version: '8'
 
-      - name: Setup Depot Tools
+      - name: Install System Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y python3 ninja-build libncurses6 libncurses-dev git curl
+
+      - name: Setup Depot Tools & Bootstrap
+        run: |
           git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
           echo "$HOME/depot_tools" >> $GITHUB_PATH
+          export PATH="$HOME/depot_tools:$PATH"
           
-          # Initialize depot_tools bootstrap directly
+          # Initialize depot tools properly
           python3 $HOME/depot_tools/ensure_bootstrap.py || true
 
-      - name: Fetch Full Source Code
+      - name: Fetch Official Source Code
         run: |
-          # Pull official source code
-          git clone --depth=1 https://github.com/kiwibrowser/src.next.git src
+          export PATH="$HOME/depot_tools:$PATH"
+          # Clone Kiwi source directly into 'src'
+          git clone --depth 1 https://github.com/kiwibrowser/src.next.git src
 
       - name: Generate Build Configurations
         run: |
           export PATH="$HOME/depot_tools:$PATH"
           cd src
           
-          # System GN or depot tools GN
-          if [ -f "../depot_tools/gn" ]; then
-            ../depot_tools/gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
-          else
-            gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
-          fi
+          # Run ensure_bootstrap again if required by depot_tools
+          python3 $HOME/depot_tools/ensure_bootstrap.py || true
+          
+          # Generate GN config
+          $HOME/depot_tools/gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false' || gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
 
       - name: Compile Finch APK
         run: |

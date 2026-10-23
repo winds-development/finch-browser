@@ -24,11 +24,14 @@ jobs:
 
       - name: Prepare Directory and Generate Config
         run: |
+          # Agar src folder hai to wahan jao, nahi to root me hi .gn dhoondo
+          if [ -d "src" ]; then cd src; fi
           mkdir -p out/Default
-          gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
+          gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false' || python3 tools/gn/bootstrap/bootstrap.py --gn-gen-args='target_os="android" target_cpu="arm64" is_debug=false'
 
       - name: Compile Finch APK
         run: |
+          if [ -d "src" ]; then cd src; fi
           ninja -C out/Default chrome_public_apk
 
       - name: Upload Finch APK Artifact
@@ -36,5 +39,5 @@ jobs:
         with:
           name: Finch-Browser-APK
           path: |
-            out/Default/apks/*.apk
-            out/Default/apks/*.aab
+            **/out/Default/apks/*.apk
+            **/out/Default/apks/*.aab

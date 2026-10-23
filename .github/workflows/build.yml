@@ -22,27 +22,18 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y python3 ninja-build libncurses6 libncurses-dev generate-ninja
 
-      - name: Locate and Generate GN Build
+      - name: Generate Build Configurations
         run: |
-          GN_BIN=$(which gn || find . -name "gn" -type f | head -n 1)
-          if [ -z "$GN_BIN" ]; then
-            sudo apt-get install -y generate-ninja
-            GN_BIN="gn"
-          fi
-          SRC_DIR=$(dirname $(find . -maxdepth 3 -name ".gn" | head -n 1))
-          cd "$SRC_DIR"
-          $GN_BIN gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
+          gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false' || true
 
       - name: Compile Finch APK
         run: |
-          SRC_DIR=$(dirname $(find . -maxdepth 3 -name ".gn" | head -n 1))
-          cd "$SRC_DIR"
-          ninja -C out/Default chrome_public_apk || ninja -C out/Default chrome_apk
+          ninja -C out/Default chrome_public_apk
 
       - name: Upload Finch APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Finch-Browser-APK
           path: |
-            **/out/Default/apks/*.apk
-            **/out/Default/apks/*.aab
+            out/Default/apks/*.apk
+            out/Default/apks/*.aab

@@ -20,32 +20,20 @@ jobs:
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3 ninja-build libncurses6 libncurses-dev git
+          sudo apt-get install -y python3 python3-pip ninja-build libncurses6 libncurses-dev git generate-ninja
 
-      - name: Setup Depot Tools & Generate GN
+      - name: Generate GN Config
         run: |
-          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
-          export PATH="$HOME/depot_tools:$PATH"
-          export DEPOT_TOOLS_UPDATE=0
-          
-          # Initialize Python bin path inside depot_tools
-          python3 $HOME/depot_tools/update_depot_tools.py || true
-
-          # Find exact GN executable in repo or runner
-          GN_BIN=""
+          # System GN ya repo executable use karenge
           if [ -f "./buildtools/linux64/gn" ]; then
             chmod +x ./buildtools/linux64/gn
-            GN_BIN="./buildtools/linux64/gn"
+            ./buildtools/linux64/gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
           else
-            GN_BIN="gn"
+            gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
           fi
-
-          mkdir -p out/Default
-          $GN_BIN gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
 
       - name: Compile Finch APK
         run: |
-          export PATH="$HOME/depot_tools:$PATH"
           ninja -C out/Default chrome_public_apk
 
       - name: Upload Finch APK Artifact

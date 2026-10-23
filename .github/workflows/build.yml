@@ -20,11 +20,17 @@ jobs:
       - name: Install Build Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3 ninja-build libncurses6 libncurses-dev
+          sudo apt-get install -y python3 ninja-build libncurses6 libncurses-dev generate-ninja
 
       - name: Generate Build Configurations
         run: |
-          gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
+          chmod +x ./tools/gn/bootstrap/bootstrap.py || true
+          if [ -f "./buildtools/linux64/gn" ]; then
+            chmod +x ./buildtools/linux64/gn
+            ./buildtools/linux64/gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
+          else
+            gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
+          fi
 
       - name: Compile Finch APK
         run: |

@@ -9,10 +9,10 @@ jobs:
 
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Java JDK
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '8'
@@ -31,7 +31,7 @@ jobs:
           ninja -C out/Default chrome_public_apk
 
       - name: Upload Finch APK Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Finch-Browser-APK
           path: out/Default/apks/ChromePublic.apk

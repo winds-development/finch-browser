@@ -20,33 +20,26 @@ jobs:
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3 ninja-build libncurses6 libncurses-dev git curl
+          sudo apt-get install -y python3 ninja-build libncurses6 libncurses-dev git curl gn
 
-      - name: Setup Depot Tools & Bootstrap
+      - name: Setup Depot Tools
         run: |
           git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
           echo "$HOME/depot_tools" >> $GITHUB_PATH
-          export PATH="$HOME/depot_tools:$PATH"
-          
-          # Initialize depot tools properly
-          python3 $HOME/depot_tools/ensure_bootstrap.py || true
 
       - name: Fetch Official Source Code
         run: |
-          export PATH="$HOME/depot_tools:$PATH"
-          # Clone Kiwi source directly into 'src'
-          git clone --depth 1 https://github.com/kiwibrowser/src.next.git src
+          # Fetch full repository into src
+          git clone https://github.com/kiwibrowser/src.next.git src --depth 1
 
       - name: Generate Build Configurations
         run: |
           export PATH="$HOME/depot_tools:$PATH"
+          export DEPOT_TOOLS_UPDATE=0
           cd src
           
-          # Run ensure_bootstrap again if required by depot_tools
-          python3 $HOME/depot_tools/ensure_bootstrap.py || true
-          
-          # Generate GN config
-          $HOME/depot_tools/gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false' || gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
+          # Use system gn or depot_tools gn directly
+          gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
 
       - name: Compile Finch APK
         run: |

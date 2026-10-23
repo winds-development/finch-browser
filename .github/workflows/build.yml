@@ -26,21 +26,17 @@ jobs:
 
       - name: Fetch Official Source Code (gclient sync)
         run: |
-          export PATH="$HOME/depot_tools:$PATH"
-          # Create .gclient configuration for Kiwi/Chromium source
           gclient config --spec 'solutions = [{ "name": "src", "url": "https://github.com/kiwibrowser/src.next.git", "managed": False, "custom_deps": {}, },]'
           gclient sync --no-history --shallow
 
       - name: Generate Build Configurations
         run: |
-          export PATH="$HOME/depot_tools:$PATH"
-          cd src
+          if [ -d "src" ]; then cd src; fi
           gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
 
       - name: Compile Finch APK
         run: |
-          export PATH="$HOME/depot_tools:$PATH"
-          cd src
+          if [ -d "src" ]; then cd src; fi
           ninja -C out/Default chrome_public_apk
 
       - name: Upload Finch APK Artifact
@@ -48,5 +44,5 @@ jobs:
         with:
           name: Finch-Browser-APK
           path: |
-            src/out/Default/apks/*.apk
-            src/out/Default/apks/*.aab
+            **/out/Default/apks/*.apk
+            **/out/Default/apks/*.aab

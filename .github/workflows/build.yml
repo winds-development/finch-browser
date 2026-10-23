@@ -17,7 +17,7 @@ jobs:
           distribution: 'zulu'
           java-version: '8'
 
-      - name: Install System Dependencies
+      - name: Install System Dependencies & GN
         run: |
           sudo apt-get update
           sudo apt-get install -y python3 ninja-build libncurses6 libncurses-dev git curl gn
@@ -26,24 +26,22 @@ jobs:
         run: |
           git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
           echo "$HOME/depot_tools" >> $GITHUB_PATH
+          # Force depot_tools update/bootstrap
+          $HOME/depot_tools/update_depot_tools || true
 
-      - name: Fetch Official Source Code
+      - name: Clone Kiwi Source
         run: |
-          # Fetch full repository into src
-          git clone https://github.com/kiwibrowser/src.next.git src --depth 1
+          # Fresh clone into src directory
+          git clone --depth 1 https://github.com/kiwibrowser/src.next.git src
 
       - name: Generate Build Configurations
         run: |
-          export PATH="$HOME/depot_tools:$PATH"
-          export DEPOT_TOOLS_UPDATE=0
           cd src
-          
-          # Use system gn or depot_tools gn directly
-          gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
+          # Force using system GN binary directly instead of depot_tools wrapper script
+          /usr/bin/gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false' || gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
 
       - name: Compile Finch APK
         run: |
-          export PATH="$HOME/depot_tools:$PATH"
           cd src
           ninja -C out/Default chrome_public_apk
 

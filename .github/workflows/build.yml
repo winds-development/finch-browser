@@ -17,25 +17,33 @@ jobs:
           distribution: 'zulu'
           java-version: '8'
 
-      - name: Install System Dependencies & Depot Tools
+      - name: Install System Dependencies & Setup GN Binary
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3 ninja-build libncurses6 libncurses-dev git
+          sudo apt-get install -y python3 ninja-build libncurses6 libncurses-dev git curl
+          
+          # Install official standalone GN binary directly
+          mkdir -p $HOME/gn_bin
+          curl -sL https://chrome-infra-packages.appspot.com/dl/gn/gn/linux-amd64/latest -o $HOME/gn_bin/gn.zip || true
+          
+          # Fallback: Install system gn package via apt
+          sudo apt-get install -y gn || true
+          
+          # Setup Depot Tools
           git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
           echo "$HOME/depot_tools" >> $GITHUB_PATH
 
-      - name: Fetch Official Source Code & Binaries
+      - name: Fetch Official Source Code
         run: |
           gclient config --spec 'solutions = [{ "name": "src", "url": "https://github.com/kiwibrowser/src.next.git", "managed": False, "custom_deps": {}, },]'
           gclient sync --no-history --shallow
-          # Download GN binary and build tools
-          gclient runhooks || true
 
       - name: Generate Build Configurations
         run: |
           if [ -d "src" ]; then cd src; fi
-          # Direct GN execution from depot tools / buildtools
-          gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false' || python3 $HOME/depot_tools/gn.py gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
+          
+          # Execute GN directly without wrapper
+          gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
 
       - name: Compile Finch APK
         run: |

@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Source Code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Set up Java JDK
@@ -26,19 +26,26 @@ jobs:
         run: |
           git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
           echo "$HOME/depot_tools" >> $GITHUB_PATH
-          # Force depot_tools update/bootstrap
-          $HOME/depot_tools/update_depot_tools || true
 
-      - name: Clone Kiwi Source
+      - name: Fresh Clone Kiwi Source
         run: |
-          # Fresh clone into src directory
+          # Purana khali ya invalid src folder clean karo
+          rm -rf src
+          # Pure source tree ko clone karo
           git clone --depth 1 https://github.com/kiwibrowser/src.next.git src
+          
+          # Verification check
+          if [ -f "src/.gn" ]; then
+            echo ".gn file found successfully in src!"
+          else
+            echo "ERROR: .gn still missing after clone!"
+            exit 1
+          fi
 
       - name: Generate Build Configurations
         run: |
           cd src
-          # Force using system GN binary directly instead of depot_tools wrapper script
-          /usr/bin/gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false' || gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
+          gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
 
       - name: Compile Finch APK
         run: |

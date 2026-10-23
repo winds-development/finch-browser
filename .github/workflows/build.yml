@@ -22,9 +22,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y python3 ninja-build libncurses6 libncurses-dev generate-ninja
 
-      - name: Generate Build Configurations
+      - name: Prepare Directory and Generate Config
         run: |
-          gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false' || true
+          mkdir -p out/Default
+          gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
 
       - name: Compile Finch APK
         run: |

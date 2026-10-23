@@ -17,23 +17,27 @@ jobs:
           distribution: 'zulu'
           java-version: '8'
 
-      - name: Install Dependencies & Depot Tools
+      - name: Install & Initialize Depot Tools
         run: |
           sudo apt-get update
           sudo apt-get install -y python3 ninja-build libncurses6 libncurses-dev git
           git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
-          echo "$HOME/depot_tools" >> $GITHUB_PATH
+          export PATH="$HOME/depot_tools:$PATH"
+          export DEPOT_TOOLS_UPDATE=0
+          # Depot tools ko initialize kar rahe hain
+          python3 $HOME/depot_tools/ensure_bootstrap.py || true
 
-      - name: Prepare Directory and Generate Config
+      - name: Generate GN Config
         run: |
           export PATH="$HOME/depot_tools:$PATH"
-          GN_PATH=$(find . -name "gn" -type f | head -n 1)
-          if [ -n "$GN_PATH" ]; then
-            chmod +x "$GN_PATH"
-            "$GN_PATH" gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
-          else
-            gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
+          # Root directory locate karo
+          GN_BIN=$(which gn || find . -name "gn" -type f | head -n 1)
+          if [ -z "$GN_BIN" ]; then
+            GN_BIN="gn"
           fi
+          
+          # Run GN gen directly with root parameter if needed
+          $GN_BIN gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false' --root=. || $GN_BIN gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
 
       - name: Compile Finch APK
         run: |

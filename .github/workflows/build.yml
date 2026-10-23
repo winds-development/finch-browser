@@ -1,0 +1,37 @@
+name: Build Finch Browser APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v3
+
+      - name: Set up Java JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '8'
+
+      - name: Install Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3 ninja-build libncurses5
+
+      - name: Generate Build Configurations
+        run: |
+          gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
+
+      - name: Compile Finch APK
+        run: |
+          ninja -C out/Default chrome_public_apk
+
+      - name: Upload Finch APK Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: Finch-Browser-APK
+          path: out/Default/apks/ChromePublic.apk

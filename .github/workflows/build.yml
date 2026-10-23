@@ -10,8 +10,6 @@ jobs:
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Set up Java JDK
         uses: actions/setup-java@v4
@@ -19,40 +17,30 @@ jobs:
           distribution: 'zulu'
           java-version: '8'
 
-      - name: Install System Dependencies
+      - name: Install System Dependencies & Depot Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3 python3-pip ninja-build libncurses6 libncurses-dev git generate-ninja
+          sudo apt-get install -y python3 ninja-build libncurses6 libncurses-dev git
+          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
+          echo "$HOME/depot_tools" >> $GITHUB_PATH
 
-      - name: Generate GN Config
+      - name: Fetch Official Source Code (gclient sync)
         run: |
-          # 1. Locate .gn file
-          GN_FILE=$(find . -name ".gn" -type f | head -n 1)
-          
-          if [ -n "$GN_FILE" ]; then
-            ROOT_DIR=$(dirname "$GN_FILE")
-            echo "Found .gn in $ROOT_DIR"
-            cd "$ROOT_DIR"
-          fi
+          export PATH="$HOME/depot_tools:$PATH"
+          # Create .gclient configuration for Kiwi/Chromium source
+          gclient config --spec 'solutions = [{ "name": "src", "url": "https://github.com/kiwibrowser/src.next.git", "managed": False, "custom_deps": {}, },]'
+          gclient sync --no-history --shallow
 
-          # 2. Locate or install GN binary
-          if [ -f "./buildtools/linux64/gn" ]; then
-            chmod +x ./buildtools/linux64/gn
-            GN_EXEC="./buildtools/linux64/gn"
-          else
-            GN_EXEC="gn"
-          fi
-
-          # 3. Create output dir and generate build files
-          mkdir -p out/Default
-          $GN_EXEC gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
+      - name: Generate Build Configurations
+        run: |
+          export PATH="$HOME/depot_tools:$PATH"
+          cd src
+          gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
 
       - name: Compile Finch APK
         run: |
-          GN_FILE=$(find . -name ".gn" -type f | head -n 1)
-          if [ -n "$GN_FILE" ]; then
-            cd $(dirname "$GN_FILE")
-          fi
+          export PATH="$HOME/depot_tools:$PATH"
+          cd src
           ninja -C out/Default chrome_public_apk
 
       - name: Upload Finch APK Artifact
@@ -60,5 +48,5 @@ jobs:
         with:
           name: Finch-Browser-APK
           path: |
-            **/out/Default/apks/*.apk
-            **/out/Default/apks/*.aab
+            src/out/Default/apks/*.apk
+            src/out/Default/apks/*.aab

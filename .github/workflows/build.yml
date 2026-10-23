@@ -1,7 +1,13 @@
-name: Build Finch Browser APK
+name: 'Any branch: Build APK'
 
 on:
+  pull_request:
+    branches:
+      - main
+      - kiwi
   workflow_dispatch:
+
+concurrency: build_test_apk
 
 jobs:
   build:
@@ -17,37 +23,25 @@ jobs:
           distribution: 'zulu'
           java-version: '8'
 
-      - name: Install System Dependencies & Setup GN Binary
+      - name: Setup Depot Tools
         run: |
           sudo apt-get update
           sudo apt-get install -y python3 ninja-build libncurses6 libncurses-dev git curl
-          
-          # Install official standalone GN binary directly
-          mkdir -p $HOME/gn_bin
-          curl -sL https://chrome-infra-packages.appspot.com/dl/gn/gn/linux-amd64/latest -o $HOME/gn_bin/gn.zip || true
-          
-          # Fallback: Install system gn package via apt
-          sudo apt-get install -y gn || true
-          
-          # Setup Depot Tools
           git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
           echo "$HOME/depot_tools" >> $GITHUB_PATH
 
-      - name: Fetch Official Source Code
+      - name: Fetch Full Source Code
         run: |
-          gclient config --spec 'solutions = [{ "name": "src", "url": "https://github.com/kiwibrowser/src.next.git", "managed": False, "custom_deps": {}, },]'
-          gclient sync --no-history --shallow
+          git clone --depth 1 https://github.com/kiwibrowser/src.next.git src
 
       - name: Generate Build Configurations
         run: |
-          if [ -d "src" ]; then cd src; fi
-          
-          # Execute GN directly without wrapper
+          cd src
           gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
 
       - name: Compile Finch APK
         run: |
-          if [ -d "src" ]; then cd src; fi
+          cd src
           ninja -C out/Default chrome_public_apk
 
       - name: Upload Finch APK Artifact
@@ -55,5 +49,5 @@ jobs:
         with:
           name: Finch-Browser-APK
           path: |
-            **/out/Default/apks/*.apk
-            **/out/Default/apks/*.aab
+            src/out/Default/apks/*.apk
+            src/out/Default/apks/*.aab

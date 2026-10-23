@@ -17,30 +17,40 @@ jobs:
           distribution: 'zulu'
           java-version: '8'
 
-      - name: Install System Build Tools & Native GN
+      - name: Install System Dependencies & GN
         run: |
           sudo apt-get update
           sudo apt-get install -y python3 ninja-build libncurses6 libncurses-dev git curl gn
 
-      - name: Clone Kiwi Source Tree
+      - name: Setup Depot Tools
+        run: |
+          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
+          echo "$HOME/depot_tools" >> $GITHUB_PATH
+
+      - name: Fetch Kiwi Source & Chromium Build Configs
         run: |
           rm -rf kiwi_src
+          # Clone Kiwi source tree
           git clone --depth 1 https://github.com/kiwibrowser/src.next.git kiwi_src
+          
+          # Fetch missing Chromium build tools / configs if missing
+          if [ ! -d "kiwi_src/build/config" ]; then
+            echo "Injecting missing Chromium build configs..."
+            git clone --depth 1 https://chromium.googlesource.com/chromium/src/build kiwi_src/build
+            git clone --depth 1 https://chromium.googlesource.com/chromium/src/tools kiwi_src/tools
+          fi
 
-      - name: Generate GN Build Config (Using System GN)
+      - name: Generate GN Build Configurations
         run: |
           cd kiwi_src
           
-          # Create root .gn if missing
+          # Create root .gn if needed
           if [ ! -f ".gn" ]; then
             echo 'buildconfig = "//build/config/BUILDCONFIG.gn"' > .gn
           fi
 
-          # Disable depot tools auto-update environment check
           export DEPOT_TOOLS_UPDATE=0
-          
-          # Force call System GN binary directly (/usr/bin/gn)
-          /usr/bin/gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
+          gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
 
       - name: Compile Finch APK
         run: |

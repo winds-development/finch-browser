@@ -28,11 +28,20 @@ jobs:
           export PATH="$HOME/depot_tools:$PATH"
           export DEPOT_TOOLS_UPDATE=0
           
-          # Initialize depot tools properly
-          $HOME/depot_tools/gclient || true
-          
-          # Run GN generation
-          gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false' || $HOME/depot_tools/gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
+          # Initialize Python bin path inside depot_tools
+          python3 $HOME/depot_tools/update_depot_tools.py || true
+
+          # Find exact GN executable in repo or runner
+          GN_BIN=""
+          if [ -f "./buildtools/linux64/gn" ]; then
+            chmod +x ./buildtools/linux64/gn
+            GN_BIN="./buildtools/linux64/gn"
+          else
+            GN_BIN="gn"
+          fi
+
+          mkdir -p out/Default
+          $GN_BIN gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
 
       - name: Compile Finch APK
         run: |

@@ -17,49 +17,34 @@ jobs:
           distribution: 'zulu'
           java-version: '8'
 
-      - name: Install System Dependencies & GN
+      - name: Install System Build Tools & Native GN
         run: |
           sudo apt-get update
           sudo apt-get install -y python3 ninja-build libncurses6 libncurses-dev git curl gn
-
-      - name: Setup Depot Tools
-        run: |
-          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
-          echo "$HOME/depot_tools" >> $GITHUB_PATH
 
       - name: Clone Kiwi Source Tree
         run: |
           rm -rf kiwi_src
           git clone --depth 1 https://github.com/kiwibrowser/src.next.git kiwi_src
 
-      - name: Locate GN and Generate Build Config
+      - name: Generate GN Build Config (Using System GN)
         run: |
-          # .gn file ki location search karo
-          GN_FILE=$(find kiwi_src -name ".gn" | head -n 1)
+          cd kiwi_src
           
-          if [ -z "$GN_FILE" ]; then
-            echo "Creating fallback .gn file..."
-            mkdir -p kiwi_src
-            echo 'buildconfig = "//build/config/BUILDCONFIG.gn"' > kiwi_src/.gn
-            BUILD_DIR="kiwi_src"
-          else
-            BUILD_DIR=$(dirname "$GN_FILE")
+          # Create root .gn if missing
+          if [ ! -f ".gn" ]; then
+            echo 'buildconfig = "//build/config/BUILDCONFIG.gn"' > .gn
           fi
+
+          # Disable depot tools auto-update environment check
+          export DEPOT_TOOLS_UPDATE=0
           
-          echo "Building inside: $BUILD_DIR"
-          cd "$BUILD_DIR"
-          
-          # Run GN generation
-          gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
+          # Force call System GN binary directly (/usr/bin/gn)
+          /usr/bin/gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
 
       - name: Compile Finch APK
         run: |
-          GN_FILE=$(find kiwi_src -name ".gn" | head -n 1)
-          if [ -n "$GN_FILE" ]; then
-            cd $(dirname "$GN_FILE")
-          else
-            cd kiwi_src
-          fi
+          cd kiwi_src
           ninja -C out/Default chrome_public_apk
 
       - name: Upload Finch APK Artifact
@@ -67,5 +52,5 @@ jobs:
         with:
           name: Finch-Browser-APK
           path: |
-            **/out/Default/apks/*.apk
-            **/out/Default/apks/*.aab
+            kiwi_src/out/Default/apks/*.apk
+            kiwi_src/out/Default/apks/*.aab

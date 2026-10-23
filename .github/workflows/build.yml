@@ -1,13 +1,7 @@
 name: 'Any branch: Build APK'
 
 on:
-  pull_request:
-    branches:
-      - main
-      - kiwi
   workflow_dispatch:
-
-concurrency: build_test_apk
 
 jobs:
   build:
@@ -29,18 +23,30 @@ jobs:
           sudo apt-get install -y python3 ninja-build libncurses6 libncurses-dev git curl
           git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
           echo "$HOME/depot_tools" >> $GITHUB_PATH
+          
+          # Initialize depot_tools bootstrap directly
+          python3 $HOME/depot_tools/ensure_bootstrap.py || true
 
       - name: Fetch Full Source Code
         run: |
-          git clone --depth 1 https://github.com/kiwibrowser/src.next.git src
+          # Pull official source code
+          git clone --depth=1 https://github.com/kiwibrowser/src.next.git src
 
       - name: Generate Build Configurations
         run: |
+          export PATH="$HOME/depot_tools:$PATH"
           cd src
-          gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
+          
+          # System GN or depot tools GN
+          if [ -f "../depot_tools/gn" ]; then
+            ../depot_tools/gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
+          else
+            gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
+          fi
 
       - name: Compile Finch APK
         run: |
+          export PATH="$HOME/depot_tools:$PATH"
           cd src
           ninja -C out/Default chrome_public_apk
 

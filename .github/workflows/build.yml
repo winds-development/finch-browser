@@ -17,21 +17,27 @@ jobs:
           distribution: 'zulu'
           java-version: '8'
 
-      - name: Install Build Dependencies
+      - name: Install Dependencies & Depot Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3 ninja-build libncurses6 libncurses-dev generate-ninja
+          sudo apt-get install -y python3 ninja-build libncurses6 libncurses-dev git
+          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
+          echo "$HOME/depot_tools" >> $GITHUB_PATH
 
       - name: Prepare Directory and Generate Config
         run: |
-          # Agar src folder hai to wahan jao, nahi to root me hi .gn dhoondo
-          if [ -d "src" ]; then cd src; fi
-          mkdir -p out/Default
-          gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false' || python3 tools/gn/bootstrap/bootstrap.py --gn-gen-args='target_os="android" target_cpu="arm64" is_debug=false'
+          export PATH="$HOME/depot_tools:$PATH"
+          GN_PATH=$(find . -name "gn" -type f | head -n 1)
+          if [ -n "$GN_PATH" ]; then
+            chmod +x "$GN_PATH"
+            "$GN_PATH" gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
+          else
+            gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
+          fi
 
       - name: Compile Finch APK
         run: |
-          if [ -d "src" ]; then cd src; fi
+          export PATH="$HOME/depot_tools:$PATH"
           ninja -C out/Default chrome_public_apk
 
       - name: Upload Finch APK Artifact

@@ -24,15 +24,18 @@ jobs:
           git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
           echo "$HOME/depot_tools" >> $GITHUB_PATH
 
-      - name: Fetch Official Source Code (gclient sync)
+      - name: Fetch Official Source Code & Binaries
         run: |
           gclient config --spec 'solutions = [{ "name": "src", "url": "https://github.com/kiwibrowser/src.next.git", "managed": False, "custom_deps": {}, },]'
           gclient sync --no-history --shallow
+          # Download GN binary and build tools
+          gclient runhooks || true
 
       - name: Generate Build Configurations
         run: |
           if [ -d "src" ]; then cd src; fi
-          gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
+          # Direct GN execution from depot tools / buildtools
+          gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false' || python3 $HOME/depot_tools/gn.py gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false'
 
       - name: Compile Finch APK
         run: |
